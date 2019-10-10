@@ -61,7 +61,7 @@ class PersonState:
         print("cost =", self.cost)
         print("peoples =", self.peoples)
 
-# This function gives solution using Knapsack Branch and Bound 
+# This function gives solution using Knapsack Branch and Bound
 def approx_solve_branchandbound(people, budget):
 
     for (person, (skill, cost)) in people.items():

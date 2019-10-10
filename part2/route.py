@@ -30,7 +30,6 @@
 import math
 import sys
 import queue as Q
-from haversine import haversine, Unit
 
 # Global variable
 gv_strt_cty = ""
