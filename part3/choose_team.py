@@ -6,10 +6,11 @@
 #
 # Based on skeleton code by D. Crandall, September 2019
 #
+
 import sys
 from collections import deque
 
-
+# Function to Read the file and store the data in dictionary
 def load_people(filename):
     people = {}
     with open(filename, "r") as file:
@@ -20,7 +21,7 @@ def load_people(filename):
 
 
 # Class for storing data for each person/robot
-class Person:
+class Robot:
     def __init__(self, index, name, efficiency_skill, cost):
         self.index = index
         self.name = name
@@ -39,7 +40,8 @@ class Person:
         print("efficiency_skill =", self.efficiency_skill)
         print("cost =", self.cost)
 
-class PersonState:
+# Class for storing state  of robot for each Node in a Graph
+class RobotState:
     def __init__(self, level_index,name, efficiency_skill, cost, people):
         self.level_index = level_index
         self.name = name
@@ -80,67 +82,67 @@ def approx_solve_branchandbound(people, budget):
         cost_value = float(cost_list.__getitem__(i - 1))
         skill_value = float(efficiency.__getitem__(i - 1))
 
-        item = Person(i-1, name_value, skill_value, cost_value)
+        item = Robot(i - 1, name_value, skill_value, cost_value)
 
-        #items.append(Item(i - 1, name_value, float(skill_value), float(cost_value)))
         items.append(item)
-        # print(items)
 
     # sorting Item on basis of cost per efficiency skill.
     items = sorted(items, key=lambda x: x.cost / x.efficiency_skill)
 
-    node = PersonState(-1, '', 0, 0, [])
+    node = RobotState(-1, '', 0, 0, [])
 
-    v = node
+    node1 = node
     Q = deque([])
-    Q.append(v)
+    Q.append(node1)
 
-    maxValue = 0
-    choosen_team = []
+    maxValue_skills = 0
+    chosen_team = []
+
     while (len(Q) != 0):
         # Dequeue a node
-        v = Q[0]
-        # print(Q)
+
+        node1 = Q[0]
+
         Q.popleft()
 
-        u = PersonState(None, None, None, None, [])
+        node2 = RobotState(None, None, None, None, [])
 
-        u.level_index = v.level_index + 1
-        u.name = items[u.level_index].name
-        u.cost = v.cost + items[u.level_index].cost
-        u.efficiency_skill = v.efficiency_skill + items[u.level_index].efficiency_skill
-        u.peoples = list(v.peoples)
-        u.peoples.append(items[u.level_index].index)
+        node2.level_index = node1.level_index + 1
+        node2.name = items[node2.level_index].name
+        node2.cost = node1.cost + items[node2.level_index].cost
+        node2.efficiency_skill = node1.efficiency_skill + items[node2.level_index].efficiency_skill
+        node2.peoples = list(node1.peoples)
+        node2.peoples.append(items[node2.level_index].index)
 
-        if (u.cost <= capacity and u.efficiency_skill > maxValue):
-            maxValue = u.efficiency_skill
-            choosen_team = u.peoples
+        if (node2.cost <= capacity and node2.efficiency_skill > maxValue_skills):
+            maxValue_skills = node2.efficiency_skill
+            chosen_team = node2.peoples
 
-        bound_u = calculate_bound(u, capacity, item_count, items)
-        if (bound_u > maxValue):
-            Q.append(u)
+        bound_u = calculate_bound(node2, capacity, item_count, items)
+        if (bound_u > maxValue_skills):
+            Q.append(node2)
 
-        u = PersonState(None, None, None, None, [])
-        u.level_index = v.level_index + 1
-        u.cost = v.cost
-        u.efficiency_skill = v.efficiency_skill
-        u.peoples = list(v.peoples)
+        node2 = RobotState(None, None, None, None, [])
+        node2.level_index = node1.level_index + 1
+        node2.cost = node1.cost
+        node2.efficiency_skill = node1.efficiency_skill
+        node2.peoples = list(node1.peoples)
 
-        bound_u = calculate_bound(u, capacity, item_count, items)
+        bound_u = calculate_bound(node2, capacity, item_count, items)
 
-        if (bound_u > maxValue):
-            Q.append(u)
+        if (bound_u > maxValue_skills):
+            Q.append(node2)
 
     total_cost = 0
     solution = ()
 
-    for i in range(0, len(choosen_team)):
+    for i in range(0, len(chosen_team)):
         for j in range(0, len(items)):
-            if (items.__getitem__(j).index == choosen_team[i]):
+            if (items.__getitem__(j).index == chosen_team[i]):
                 total_cost += items.__getitem__(j).cost
                 solution += ((items.__getitem__(j).name, 1),)
 
-    print("Found a group with %d people costing %f with total skill %f" % (len(choosen_team), total_cost, maxValue))
+    print("Found a group with %d people costing %f with total skill %f" % (len(chosen_team), total_cost, maxValue_skills))
 
     for s in solution:
         print("%s %f" % s)
@@ -189,7 +191,7 @@ def approx_solve(people, budget):
     for s in solution:
         print("%s %f" % s)
 
-
+# Main Class
 if __name__ == "__main__":
 
     if (len(sys.argv) != 3):
@@ -204,3 +206,11 @@ if __name__ == "__main__":
 
     approx_solve_branchandbound(people, budget)
     # approx_solve(people,budget)
+
+'''
+Citation/Reference 
+1) https://www.youtube.com/watch?v=yV1d-b_NeK8&t=408s
+Reference for the Branch and Bound 0/1 Knapsack
+2) Decision Tree in Python 
+https://www.datacamp.com/community/tutorials/decision-tree-classification-python
+'''
