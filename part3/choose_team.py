@@ -7,7 +7,6 @@
 # Based on skeleton code by D. Crandall, September 2019
 #
 import sys
-from recordclass import recordclass
 from collections import deque
 
 
@@ -20,41 +19,79 @@ def load_people(filename):
     return people
 
 
-# This function implements a greedy solution to the problem:
-#  It adds people in decreasing order of "skill per dollar,"
-#  until the budget is exhausted. It exactly exhausts the budget
-#  by adding a fraction of the last person.
-#
+# Class for storing data for each person/robot
+class Person:
+    def __init__(self, index, name, efficiency_skill, cost):
+        self.index = index
+        self.name = name
+        self.efficiency_skill = efficiency_skill
+        self.cost = cost
 
-def approx_solve(people, budget):
-    Item = recordclass('Item', 'index name efficiency cost')
-    Node = recordclass('Node', 'level name efficiency cost items')
-    # lines = input_data.split('\n')
-    # print(input_data.items())
+    def __iter__(self):
+        yield self.index
+        yield self.name
+        yield self.efficiency_skill
+        yield self.cost
+
+    def tostring(self):
+        print("Index =", self.index )
+        print("name =", self.name)
+        print("efficiency_skill =", self.efficiency_skill)
+        print("cost =", self.cost)
+
+class PersonState:
+    def __init__(self, level_index,name, efficiency_skill, cost, people):
+        self.level_index = level_index
+        self.name = name
+        self.efficiency_skill = efficiency_skill
+        self.cost = cost
+        self.peoples = people
+
+    def __iter__(self):
+        yield self.level_index
+        yield self.name
+        yield self.efficiency_skill
+        yield self.cost
+        yield self.peoples
+
+    def tostring(self):
+        print("Index =", self.level_index )
+        print("name =", self.name)
+        print("efficiency_skill =", self.efficiency_skill)
+        print("cost =", self.cost)
+        print("peoples =", self.peoples)
+
+# This function gives solution using Knapsack Branch and Bound
+def approx_solve_branchandbound(people, budget):
+
     for (person, (skill, cost)) in people.items():
         name_list.append(person)
         cost_list.append(cost)
         efficiency.append(skill)
-    # firstLine = lines[0].split()
+
     item_count = len(cost_list)
-    # print(item_count)
+
     capacity = budget
-    # print(capacity)
+
     items = []
 
     for i in range(1, item_count + 1):
-        # print(cost_list.__getitem__(i-1))
         name_value = name_list.__getitem__(i - 1)
         cost_value = float(cost_list.__getitem__(i - 1))
         skill_value = float(efficiency.__getitem__(i - 1))
-        # parts = line.split()
-        items.append(Item(i - 1, name_value, float(skill_value), float(cost_value)))
-        # print(items)
-    # sorting Item on basis of cost per efficiency.
-    items = sorted(items, key=lambda Item: Item.cost / Item.efficiency)
-    # print("***",items)
 
-    v = Node(level=-1, name=None, efficiency=0, cost=0, items=[])
+        item = Person(i-1, name_value, skill_value, cost_value)
+
+        #items.append(Item(i - 1, name_value, float(skill_value), float(cost_value)))
+        items.append(item)
+        # print(items)
+
+    # sorting Item on basis of cost per efficiency skill.
+    items = sorted(items, key=lambda x: x.cost / x.efficiency_skill)
+
+    node = PersonState(-1, '', 0, 0, [])
+
+    v = node
     Q = deque([])
     Q.append(v)
 
@@ -66,28 +103,28 @@ def approx_solve(people, budget):
         # print(Q)
         Q.popleft()
 
-        u = Node(level=None, name=None, cost=None, efficiency=None, items=[])
+        u = PersonState(None, None, None, None, [])
 
-        u.level = v.level + 1
-        u.name = items[u.level].name
-        u.cost = v.cost + items[u.level].cost
-        u.efficiency = v.efficiency + items[u.level].efficiency
-        u.items = list(v.items)
-        u.items.append(items[u.level].index)
-        # print(u)
-        if (u.cost <= capacity and u.efficiency > maxValue):
-            maxValue = u.efficiency
-            choosen_team = u.items
+        u.level_index = v.level_index + 1
+        u.name = items[u.level_index].name
+        u.cost = v.cost + items[u.level_index].cost
+        u.efficiency_skill = v.efficiency_skill + items[u.level_index].efficiency_skill
+        u.peoples = list(v.peoples)
+        u.peoples.append(items[u.level_index].index)
+
+        if (u.cost <= capacity and u.efficiency_skill > maxValue):
+            maxValue = u.efficiency_skill
+            choosen_team = u.peoples
 
         bound_u = calculate_bound(u, capacity, item_count, items)
         if (bound_u > maxValue):
             Q.append(u)
 
-        u = Node(level=None, name=None, cost=None, efficiency=None, items=[])
-        u.level = v.level + 1
+        u = PersonState(None, None, None, None, [])
+        u.level_index = v.level_index + 1
         u.cost = v.cost
-        u.efficiency = v.efficiency
-        u.items = list(v.items)
+        u.efficiency_skill = v.efficiency_skill
+        u.peoples = list(v.peoples)
 
         bound_u = calculate_bound(u, capacity, item_count, items)
 
@@ -116,20 +153,41 @@ def calculate_bound(u, capacity, item_count, items):
     if (u.cost >= capacity):
         return 0
     else:
-        result = u.efficiency
-        j = u.level + 1
+        result = u.efficiency_skill
+        j = u.level_index + 1
         totalweight = u.cost
 
         while (j < item_count and totalweight + items[j].cost <= capacity):
             totalweight = totalweight + items[j].cost
-            result = result + items[j].efficiency
+            result = result + items[j].efficiency_skill
             j = j + 1
 
         k = j
         if (k <= item_count - 1):
-            result = result + (capacity - totalweight) * items[k].efficiency / items[k].cost
+            result = result + (capacity - totalweight) * items[k].efficiency_skill / items[k].cost
 
         return result
+
+# This function implements a greedy solution to the problem:
+#  It adds people in decreasing order of "skill per dollar,"
+#  until the budget is exhausted.
+#  But this search technique may not give an optimal solution for every case
+
+def approx_solve(people, budget):
+
+    solution=()
+    for (person, (skill, cost)) in sorted(people.items(), key=lambda x: x[1][0]/x[1][1],reverse=True):
+        if budget - cost > 0:
+            solution += ( ( person, 1), )
+            budget -= cost
+        else:
+            continue
+
+    print("Found a group with %d people costing %f with total skill %f" % \
+          (len(solution), sum(people[p][1] * f for p, f in solution), sum(people[p][0] * f for p, f in solution)))
+
+    for s in solution:
+        print("%s %f" % s)
 
 
 if __name__ == "__main__":
@@ -144,4 +202,5 @@ if __name__ == "__main__":
     efficiency = []
     name_list = []
 
-    approx_solve(people, budget)
+    approx_solve_branchandbound(people, budget)
+    # approx_solve(people,budget)
